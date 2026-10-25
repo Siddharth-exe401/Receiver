@@ -1,5 +1,4 @@
 import express from 'express';
-import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -9,76 +8,53 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const bins = new Map();
-const subscribers = new Map();
+let records = [];
+let clients = new Set();
 
-function getOrCreateBin(binId) {
-  if (!bins.has(binId)) {
-    bins.set(binId, []);
-    subscribers.set(binId, new Set());
-  }
-  return bins.get(binId);
-}
-
-app.get('/b/:binId', (req, res) => {
+// 1. GET / serves the dashboard
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.all('/api/catch/:binId', (req, res) => {
-  const { binId } = req.params;
-  const bin = getOrCreateBin(binId);
-
-  const incomingRecord = {
-    id: crypto.randomUUID(),
+// 2. POST / catches the JSON payload (Matches your friend's code)
+app.post('/', (req, res) => {
+  const incoming = {
+    id: Date.now().toString(36),
     timestamp: new Date().toLocaleTimeString(),
-    method: req.method,
     headers: req.headers,
-    query: req.query,
     body: req.body
   };
 
-  bin.unshift(incomingRecord);
-  if (bin.length > 50) bin.pop();
+  records.unshift(incoming);
+  if (records.length > 50) records.pop();
 
-  const clients = subscribers.get(binId);
-  if (clients) {
-    clients.forEach((client) => {
-      client.write(`data: ${JSON.stringify(incomingRecord)}\n\n`);
-    });
-  }
+  // Push immediately to the live webpage
+  clients.forEach((client) => {
+    client.write(`data: ${JSON.stringify(incoming)}\n\n`);
+  });
 
-  res.status(200).json({ status: 'ok', received: true });
+  res.status(200).json({ status: 'success', received: true });
 });
 
-app.get('/api/stream/:binId', (req, res) => {
-  const { binId } = req.params;
-  getOrCreateBin(binId);
-
+// 3. Real-time stream for the UI
+app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const history = bins.get(binId) || [];
-  res.write(`data: ${JSON.stringify({ type: 'INIT', history })}\n\n`);
+  // Send past records on initial load
+  res.write(`data: ${JSON.stringify({ type: 'INIT', history: records })}\n\n`);
 
-  subscribers.get(binId).add(res);
-
-  req.on('close', () => {
-    subscribers.get(binId).delete(res);
-  });
-});
-
-app.get('/', (req, res) => {
-  const newBinId = crypto.randomBytes(4).toString('hex');
-  res.redirect(`/b/${newBinId}`);
+  clients.add(res);
+  req.on('close', () => clients.delete(res));
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
-        
+                      
