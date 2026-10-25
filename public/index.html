@@ -3,53 +3,139 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JSON Received | Inspector</title>
+  <title>CYBER_RECEIVER // INGRESS_TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --neon: #00ff66;
+      --neon-dim: #008f39;
+      --neon-glow: rgba(0, 255, 102, 0.35);
+      --dark-bg: #050a06;
+    }
+    body {
+      font-family: 'Share Tech Mono', 'JetBrains Mono', monospace;
+      background-color: var(--dark-bg);
+      color: #00ff66;
+    }
+    /* CRT Scanline & grid aesthetic */
+    .scanlines {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.4) 50%,
+        rgba(0, 0, 0, 0.4)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+    .neon-border {
+      border: 1px solid var(--neon-dim);
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.15), inset 0 0 10px rgba(0, 255, 102, 0.05);
+    }
+    .neon-border-active {
+      border: 1px solid var(--neon);
+      box-shadow: 0 0 15px var(--neon-glow);
+    }
+    .neon-text-glow {
+      text-shadow: 0 0 8px rgba(0, 255, 102, 0.7);
+    }
+    /* Custom Green Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020703;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #008f39;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00ff66;
+    }
+    .blink {
+      animation: blinker 1s linear infinite;
+    }
+    @keyframes blinker {
+      50% { opacity: 0; }
+    }
+  </style>
 </head>
-<body class="bg-gray-950 text-gray-100 flex flex-col h-screen font-sans">
-  <header class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+<body class="flex flex-col h-screen select-none overflow-hidden relative">
+
+  <!-- Scanlines overlay -->
+  <div class="scanlines fixed inset-0 z-50 pointer-events-none"></div>
+
+  <!-- Terminal Top Bar -->
+  <header class="neon-border bg-black/80 px-6 py-3 flex items-center justify-between z-10 m-2 mb-0">
     <div class="flex items-center space-x-3">
-      <div class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
-      <h1 class="font-bold text-lg text-white">JSON Received</h1>
+      <div class="h-2.5 w-2.5 rounded-full bg-[#00ff66] shadow-[0_0_10px_#00ff66] animate-pulse"></div>
+      <div class="tracking-widest font-bold text-sm neon-text-glow flex items-center gap-1">
+        <span>[SYS.NET_RECEIVER]</span>
+        <span class="text-xs text-[#008f39]">// PORT_LISTENER_ACTIVE</span>
+      </div>
     </div>
-    <div class="flex items-center space-x-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-lg text-sm">
-      <span class="text-gray-400">Endpoint:</span>
-      <code id="endpointUrl" class="text-emerald-400 font-mono select-all">Loading...</code>
-      <button onclick="copyEndpoint()" class="ml-2 px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-200">Copy</button>
+    <div class="flex items-center space-x-2 bg-black/60 border border-[#008f39] px-3 py-1 rounded text-xs">
+      <span class="text-[#008f39]">ENDPOINT:</span>
+      <code id="endpointUrl" class="text-[#00ff66] select-all font-mono font-bold"></code>
+      <button onclick="copyEndpoint()" class="ml-2 px-2 py-0.5 bg-[#002b11] hover:bg-[#00ff66] hover:text-black border border-[#00ff66] text-[#00ff66] text-xs transition duration-150">
+        [COPY]
+      </button>
     </div>
   </header>
 
-  <div class="flex flex-1 overflow-hidden">
-    <div class="w-1/3 border-r border-gray-800 flex flex-col">
-      <div class="p-3 border-b border-gray-800 text-xs font-semibold uppercase tracking-wider text-gray-400 flex justify-between">
-        <span>Incoming Requests</span>
-        <span id="reqCount">0 items</span>
+  <!-- Main Body Grid -->
+  <div class="flex flex-1 overflow-hidden m-2 gap-2 z-10">
+    
+    <!-- Left: Intercepted Packet Log -->
+    <div class="w-1/3 neon-border bg-black/70 flex flex-col">
+      <div class="p-3 border-b border-[#008f39] text-xs tracking-wider uppercase text-[#008f39] flex justify-between items-center bg-[#00170a]">
+        <span class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 bg-[#00ff66]"></span>
+          INCOMING_STREAM
+        </span>
+        <span id="reqCount" class="text-[#00ff66] font-bold">[00 PKTS]</span>
       </div>
-      <div id="requestList" class="flex-1 overflow-y-auto divide-y divide-gray-800"></div>
+      <div id="requestList" class="flex-1 overflow-y-auto divide-y divide-[#002b11]">
+        <!-- Logs appear here -->
+      </div>
     </div>
 
-    <div class="w-2/3 flex flex-col bg-gray-900 overflow-y-auto p-6">
-      <div id="emptyState" class="m-auto text-center text-gray-500">
-        <p class="text-base font-medium">Waiting for incoming JSON...</p>
-        <p class="text-xs mt-2 text-gray-600">Send a POST request using the endpoint at the top.</p>
+    <!-- Right: Decrypted Packet Data -->
+    <div class="w-2/3 neon-border bg-black/70 flex flex-col overflow-hidden">
+      
+      <!-- Empty state -->
+      <div id="emptyState" class="m-auto text-center p-8">
+        <div class="text-2xl neon-text-glow mb-2 animate-pulse">&gt; LISTENING ON SOCKET...<span class="blink">_</span></div>
+        <p class="text-xs text-[#008f39] tracking-wider">AWAITING INBOUND JSON INJECTION VIA HTTP POST</p>
       </div>
 
-      <div id="payloadView" class="hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase text-gray-400">Payload (JSON Body)</h2>
-          <button onclick="copyJson()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-200">Copy JSON</button>
+      <!-- Payload Content -->
+      <div id="payloadView" class="hidden flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-[#008f39] pb-2">
+          <span class="text-xs tracking-widest text-[#008f39] font-bold uppercase">&gt; RAW_JSON_PAYLOAD</span>
+          <button onclick="copyJson()" class="px-2.5 py-1 bg-[#002b11] hover:bg-[#00ff66] hover:text-black border border-[#00ff66] text-xs transition duration-150">
+            [COPY_PAYLOAD]
+          </button>
         </div>
-        <pre id="jsonDisplay" class="bg-gray-950 p-4 rounded-lg font-mono text-xs text-emerald-300 overflow-x-auto border border-gray-800"></pre>
+        <pre id="jsonDisplay" class="bg-[#020d05] p-4 rounded border border-[#003816] font-mono text-xs text-[#00ff66] overflow-x-auto shadow-inner"></pre>
 
-        <h2 class="text-sm font-semibold uppercase text-gray-400 pt-4">Headers</h2>
-        <pre id="headerDisplay" class="bg-gray-950 p-4 rounded-lg font-mono text-xs text-gray-300 overflow-x-auto border border-gray-800"></pre>
+        <div class="border-b border-[#008f39] pb-2 pt-2">
+          <span class="text-xs tracking-widest text-[#008f39] font-bold uppercase">&gt; PACKET_HEADERS</span>
+        </div>
+        <pre id="headerDisplay" class="bg-[#020d05] p-4 rounded border border-[#003816] font-mono text-xs text-[#00aa44] overflow-x-auto shadow-inner"></pre>
       </div>
     </div>
   </div>
 
   <script>
-    const binId = window.location.pathname.split('/').filter(Boolean)[1];
-    const endpoint = `${window.location.origin}/api/catch/${binId}`;
+    const endpoint = window.location.origin + '/';
     document.getElementById('endpointUrl').innerText = endpoint;
 
     let records = [];
@@ -57,32 +143,33 @@
 
     function copyEndpoint() {
       navigator.clipboard.writeText(endpoint);
-      alert('Endpoint copied to clipboard!');
+      alert('TARGET_URL_COPIED');
     }
 
     function copyJson() {
       if (selectedRecord) {
         navigator.clipboard.writeText(JSON.stringify(selectedRecord.body, null, 2));
+        alert('PAYLOAD_COPIED');
       }
     }
 
     function renderList() {
       const list = document.getElementById('requestList');
-      const count = document.getElementById('reqCount');
+      document.getElementById('reqCount').innerText = `[${String(records.length).padStart(2, '0')} PKTS]`;
       list.innerHTML = '';
-      count.innerText = `${records.length} items`;
 
       records.forEach((item) => {
         const div = document.createElement('div');
-        div.className = `p-4 cursor-pointer hover:bg-gray-900 transition flex items-center justify-between ${selectedRecord?.id === item.id ? 'bg-gray-900 border-l-4 border-emerald-500' : ''}`;
+        const isSelected = selectedRecord?.id === item.id;
+        div.className = `p-3 cursor-pointer transition flex items-center justify-between border-l-2 ${isSelected ? 'bg-[#00260f] border-[#00ff66] neon-text-glow' : 'border-transparent hover:bg-[#00170a]'}`;
         div.onclick = () => selectRecord(item);
 
         div.innerHTML = `
           <div>
-            <span class="text-xs font-bold px-1.5 py-0.5 rounded ${item.method === 'POST' ? 'bg-blue-900 text-blue-200' : 'bg-amber-900 text-amber-200'}">${item.method}</span>
-            <span class="text-xs text-gray-400 ml-2">${item.timestamp}</span>
+            <span class="text-[10px] bg-[#00ff66] text-black px-1.5 py-0.5 font-bold uppercase">POST</span>
+            <span class="text-xs text-[#00ff66] ml-2 tracking-wider">${item.timestamp}</span>
           </div>
-          <span class="text-xs font-mono text-gray-500">#${item.id.slice(0, 6)}</span>
+          <span class="text-[10px] text-[#008f39] font-mono tracking-widest">UID:${item.id}</span>
         `;
         list.appendChild(div);
       });
@@ -98,11 +185,9 @@
       renderList();
     }
 
-    const eventSource = new EventSource(`/api/stream/${binId}`);
-
+    const eventSource = new EventSource('/events');
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
       if (data.type === 'INIT') {
         records = data.history || [];
         if (records.length > 0) selectRecord(records[0]);
@@ -114,5 +199,4 @@
     };
   </script>
 </body>
-            </html>
-            
+</html>
